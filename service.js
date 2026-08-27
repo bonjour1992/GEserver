@@ -1,6 +1,9 @@
 import path from 'path';
 import { Service } from 'node-windows';
+<<<<<<< HEAD
 
+=======
+>>>>>>> 42004c9e8f189e8a2503e7b6d7160d90294e9c1f
 
 // Create a new service object
 const svc = new Service({
