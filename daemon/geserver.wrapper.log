@@ -1,0 +1,34 @@
+2026-08-27 11:45:55 - Starting G:\Programmes\nodejs\node.exe  --harmony E:\ge\server\node_modules\node-windows\lib\wrapper.js --file E:\GE\server\main.js --scriptoptions= --log "GEserver wrapper" --grow 0.25 --wait 1 --maxrestarts 3 --abortonerror n --stopparentfirst undefined
+2026-08-27 11:45:55 - Started 47912
+2026-08-27 22:04:31 - Stopping geserver.exe
+2026-08-27 22:04:31 - ProcessKill 47912
+2026-08-27 22:04:31 - Found child process: 48664 Name: conhost.exe
+2026-08-27 22:04:31 - Found child process: 27376 Name: node.exe
+2026-08-27 22:04:31 - Stopping process 48664
+2026-08-27 22:04:31 - Send SIGINT 48664
+2026-08-27 22:04:31 - SIGINT to 48664 failed - Killing as fallback
+2026-08-27 22:04:31 - Stopping process 27376
+2026-08-27 22:04:31 - Send SIGINT 27376
+2026-08-27 22:04:31 - SIGINT to 27376 failed - Killing as fallback
+2026-08-27 22:04:31 - Stopping process 47912
+2026-08-27 22:04:31 - Send SIGINT 47912
+2026-08-27 22:04:31 - SIGINT to 47912 failed - Killing as fallback
+2026-08-27 22:04:31 - Finished geserver.exe
+2026-08-27 22:04:33 - Starting G:\Programmes\nodejs\node.exe  --harmony E:\ge\server\node_modules\node-windows\lib\wrapper.js --file E:\GE\server\main.js --scriptoptions= --log "GEserver wrapper" --grow 0.25 --wait 1 --maxrestarts 3 --abortonerror n --stopparentfirst undefined
+2026-08-27 22:04:33 - Started 11760
+2026-08-27 22:04:35 - Stopping geserver.exe
+2026-08-27 22:04:35 - ProcessKill 11760
+2026-08-27 22:04:35 - Found child process: 17156 Name: conhost.exe
+2026-08-27 22:04:35 - Found child process: 47088 Name: node.exe
+2026-08-27 22:04:35 - Stopping process 17156
+2026-08-27 22:04:35 - Send SIGINT 17156
+2026-08-27 22:04:35 - SIGINT to 17156 failed - Killing as fallback
+2026-08-27 22:04:35 - Stopping process 47088
+2026-08-27 22:04:35 - Send SIGINT 47088
+2026-08-27 22:04:35 - SIGINT to 47088 failed - Killing as fallback
+2026-08-27 22:04:35 - Stopping process 11760
+2026-08-27 22:04:35 - Send SIGINT 11760
+2026-08-27 22:04:35 - SIGINT to 11760 failed - Killing as fallback
+2026-08-27 22:04:35 - Finished geserver.exe
+2026-08-27 22:04:51 - Starting G:\Programmes\nodejs\node.exe  --harmony E:\ge\server\node_modules\node-windows\lib\wrapper.js --file E:\GE\server\main.js --scriptoptions= --log "GEserver wrapper" --grow 0.25 --wait 1 --maxrestarts 3 --abortonerror n --stopparentfirst undefined
+2026-08-27 22:04:51 - Started 21956

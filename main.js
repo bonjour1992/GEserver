@@ -119,7 +119,6 @@ app.post(
 
     res.json({
       success: true,
-      path: relativePath
     });
   })
 
