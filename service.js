@@ -3,8 +3,8 @@ const Service = require('node-windows').Service;
 
 // Create a new service object
 const svc = new Service({
-    name: 'EHRService',  // Name of the service
-    description: 'EHR Service running as a Windows Service.',  // Description of the service
+    name: 'GEserver',  // Name of the service
+    description: 'server pour l editeur de titou.',  // Description of the service
     script: path.join(__dirname,  'main.js'),  // Path to your minified app (replace with your minified index.js)
 });
 
