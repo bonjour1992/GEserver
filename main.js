@@ -2,7 +2,7 @@ import express from 'express'
 import * as element from "./element.js"
 import * as remp from "./remp.js"
 import * as auth from "./Auth.js"
-import { getImage } from './image.js';
+import { getImage, saveImage } from './image.js';
 
 
 import { DB, DBInit } from './db.js';
@@ -36,7 +36,7 @@ app.use(express.json())
 //create new element return ID
 app.post('/element/new', async (req, res) => {
   let data = await req.body;
-  let id =await element.save(await element.buildElement(data.content, data.meta.jeu, data.meta.type, 0, 0, "CREATED"))
+  let id = await element.save(await element.buildElement(data.content, data.meta.jeu, data.meta.type, 0, 0, "CREATED"))
   res.json({ message: "Element created with id:" + id, id: id, action: "CREATE" });
 
 })
@@ -60,8 +60,8 @@ app.post('/element/:id', async (req, res) => {
 // delete element ID
 app.delete('/element/:id', async (req, res) => {
   let data = await element.getElement(req.params.id)
-  element.save(await element.buildElement({name:data.content.name}, data.meta.jeu, data.meta.type, parseInt(req.params.id), 0, "DELETED"))
-  res.json({ message: "Element id:" + req.params.id+"deleted", id: req.params.id, action: "DELETE" });
+  element.save(await element.buildElement({ name: data.content.name }, data.meta.jeu, data.meta.type, parseInt(req.params.id), 0, "DELETED"))
+  res.json({ message: "Element id:" + req.params.id + "deleted", id: req.params.id, action: "DELETE" });
 })
 
 
@@ -106,10 +106,22 @@ app.post('/remp/update/:jeu', async (req, res) => {
 })
 
 // get all available image
-app.get('/image',async(req,res)=>{
-  let imgs= await getImage()
+app.get('/image', async (req, res) => {
+  let imgs = await getImage()
   res.json(imgs)
 })
+//upload image
+app.post(
+  "/upload-image",
+  express.raw({ type: "image/*", limit: "10mb" }),
+  async (req, res) => {
+    await saveImage(req)
+
+    res.json({
+      success: true,
+      path: relativePath
+    });
+  })
 
 
 app.listen(process.env.PORT, () => {

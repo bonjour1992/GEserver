@@ -1,7 +1,6 @@
 import path from 'path';
 import { Service } from 'node-windows';
 
-
 // Create a new service object
 const svc = new Service({
     name: 'GEserver',  // Name of the service
