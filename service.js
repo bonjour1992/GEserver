@@ -1,5 +1,6 @@
-const path = require('path');
-const Service = require('node-windows').Service;
+import path from 'path';
+import { Service } from 'node-windows';
+
 
 // Create a new service object
 const svc = new Service({
