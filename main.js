@@ -2,6 +2,7 @@ import express from 'express'
 import * as element from "./element.js"
 import * as remp from "./remp.js"
 import * as auth from "./Auth.js"
+import * as tag from "./tag.js"
 import { getImage, saveImage } from './image.js';
 
 
@@ -21,7 +22,7 @@ element.db.elements = (await DB).collection("element")
 element.db.ids = (await DB).collection("ids")
 remp.db.remplacement = (await DB).collection("remplacement")
 auth.db.user = (await DB).collection("GEuser")
-
+tag.db.tag = (await DB).collection("tag")
 //scripting
 
 
@@ -122,8 +123,19 @@ app.post(
     });
   })
 
+app.get('/tag/all', async (req, res) => {
+  let tags = await tag.get(req.params.type)
+  res.json(tags)
+})
+
+app.post('/tag/:type/new', async (req, res) => {
+  let data = await req.body;
+  await tag.add(req.params.type,data)
+  res.json(await remp.getAll(req.params.jeu))
+
+})
 
 app.listen(process.env.PORT, () => {
-  console.log('Server is running on http://localhost:3000')
+  console.log('Server is running on port:'+process.env.PORT)
 })
 
