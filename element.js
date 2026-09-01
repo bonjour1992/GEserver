@@ -83,48 +83,51 @@ async function nextId(id) {
         return val.val + 1
     }
 }
-//TODO: stop counting deleted element
+
 export async function getStat(jeu) {
-const result = await db.elements.aggregate([
-    {
-        $match: {
-            "meta.jeu": jeu
+    const result = await db.elements.aggregate([
+        {
+            $match: {
+                "meta.jeu": jeu
+            }
+        },
+
+        // Le dernier état de chaque élément en premier
+        {
+            $sort: {
+                "id": 1,
+                "meta.date": -1,
+                "_id": -1
+            }
+        },
+
+        // On garde le dernier état de chaque élément
+        {
+            $group: {
+                _id: "$id",
+                latest: { $first: "$$ROOT" }
+            }
+        },
+
+        // On ignore les éléments dont le dernier état est DELETED
+        {
+            $match: {
+                "latest.meta.status": {
+                    $ne: "DELETED"
+                }
+            }
+        },
+
+        // Comptage directement par type
+        {
+            $group: {
+                _id: "$latest.meta.type",
+                count: { $sum: 1 }
+            }
         }
-    },
-    // Le plus récent pour chaque id sera en premier
-    {
-        $sort: {
-            "meta.date": -1
-        }
-    },
-    // On ne conserve que le document le plus récent par id
-    {
-        $group: {
-            _id: "$id",
-            latest: { $first: "$$ROOT" }
-        }
-    },
-    // On élimine les id dont le dernier document est DELETED
-    {
-        $match: {
-            "latest.meta.status": { $ne: "DELETED" }
-        }
-    },
-    // Regroupement par type
-    {
-        $group: {
-            _id: "$latest.meta.type",
-            ids: { $addToSet: "$_id" }
-        }
-    },
-    {
-        $project: {
-            count: { $size: "$ids" }
-        }
-    }
-]).toArray();
-    const output = Object.fromEntries(
+    ]).toArray();
+
+    return Object.fromEntries(
         result.map(({ _id, count }) => [_id, count])
-    )
-    return output
+    );
 }
