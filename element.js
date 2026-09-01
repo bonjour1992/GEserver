@@ -131,3 +131,5 @@ export async function getStat(jeu) {
         result.map(({ _id, count }) => [_id, count])
     );
 }
+
+
