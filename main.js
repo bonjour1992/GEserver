@@ -131,7 +131,7 @@ app.get('/tag/all', async (req, res) => {
 app.post('/tag/:type/new', async (req, res) => {
   let data = await req.body.val;
   await tag.add(req.params.type,data)
-  res.json(await remp.getAll(req.params.jeu))
+  res.json(await tag.get())
 
 })
 
