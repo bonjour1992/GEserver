@@ -6,9 +6,5 @@ export function get() {
 }
 
 export async function add(type,value ) {
-
-
         return  db.tag.insertOne({ type:type, value:value})
-
-
 }

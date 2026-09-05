@@ -10,13 +10,17 @@ export function getAll(jeu) {
 }
 
 export async function update(elems, jeu) {
-    elems.forEach(async elem => {
+    await Promise.all(elems.map(async elem => {
         elem.jeu = jeu
-        elem._id=new ObjectId(elem._id)
-        let e = { ...elem }
-        delete e._id
+        elem._id = new ObjectId(elem._id)
 
-        await db.remplacement.replaceOne({ _id: new ObjectId(elem._id) }, elem,{upsert:true})
 
-    });
+
+        await db.remplacement.replaceOne(
+            { _id: elem._id },
+            elem,
+            { upsert: true }
+        )
+    }))
 }
+
