@@ -23,70 +23,342 @@ element.db.ids = (await DB).collection("ids")
 remp.db.remplacement = (await DB).collection("remplacement")
 auth.db.user = (await DB).collection("GEuser")
 tag.db.tag = (await DB).collection("tag")
+auth.db.tokenAuth = (await DB).collection("GEtokenAuth")
+auth.db.tokenInvite = (await DB).collection("GEtokenInvite")
+auth.db.ids = (await DB).collection("ids")
+
 //scripting
 
 
-//API
-
 const app = express()
+
 app.use(cors());
 app.use('/public', express.static('public'))
 app.use(express.json())
 
 
-//create new element return ID
-app.post('/element/new', async (req, res) => {
-  let data = await req.body;
-  let id = await element.save(await element.buildElement(data.content, data.meta.jeu, data.meta.type, 0, 0, "CREATED"))
-  res.json({ message: "Element created with id:" + id, id: id, action: "CREATE" });
+/*
+ * =========================
+ * AUTHENTIFICATION PUBLIQUE
+ * =========================
+ */
 
-})
+app.post('/auth/invite/use/:code', async (req, res) => {
+  const { login, password } = req.body;
 
-// get  last version of element ID 
-app.get('/element/:id', async (req, res) => {
-  let carte = await element.getElement(req.params.id)
-  if (carte) res.json(carte)
-  else res.status(404).json(null)
-})
+  if (!login || !password) {
+    return res.status(400).json({
+      error: "Login et mot de passe obligatoires"
+    });
+  }
 
+  const result = await auth.createUser(
+    login.trim(),
+    password,
+    req.params.code
+  );
 
-// update element ID
-app.post('/element/:id', async (req, res) => {
-  let data = await req.body;
-  element.save(await element.buildElement(data.content, data.meta.jeu, data.meta.type, parseInt(req.params.id), 0, "UPDATED"))
-  res.json({ message: "Element updated with id:" + req.params.id, id: req.params.id, action: "UPDATE" });
-})
+  if (!result) {
+    return res.status(400).json({
+      error: "Invitation invalide ou login déjà utilisé"
+    });
+  }
 
-
-// delete element ID
-app.delete('/element/:id', async (req, res) => {
-  let data = await element.getElement(req.params.id)
-  element.save(await element.buildElement({ name: data.content.name }, data.meta.jeu, data.meta.type, parseInt(req.params.id), 0, "DELETED"))
-  res.json({ message: "Element id:" + req.params.id + "deleted", id: req.params.id, action: "DELETE" });
-})
-
+  res.json(result);
+});
 
 
-// get search hearder for all element
-app.get('/element/search/:jeu', async (req, res) => {
-  res.json(await element.getSearch(req.params.jeu))
-})
+app.post('/auth/login', async (req, res) => {
 
-//TODO:delete element ID
-app.delete('/element/:id', (req, res) => {
+  const { login, password } = req.body;
 
-  res.send('Hello World')
-})
+  if (!login || !password) {
+    return res.status(400).json({
+      error: "Login et mot de passe obligatoires"
+    });
+  }
 
-// get nombre d'element par TYPE
-app.get('/element/:jeu/stat', async (req, res) => {
-  res.json(await element.getStat(req.params.jeu))
-})
+  const result = await auth.login(
+    login.trim(),
+    password
+  );
 
-// get all element TYPE
-app.get('/element/:jeu/:type', async (req, res) => {
-  res.json(await element.getListElement(req.params.jeu, req.params.type))
-})
+  if (!result) {
+    return res.status(401).json({
+      error: "Login ou mot de passe incorrect"
+    });
+  }
+
+  res.json(result);
+});
+
+
+/*
+ * =========================
+ * AUTHENTIFICATION OBLIGATOIRE
+ * =========================
+ */
+
+app.use(auth.middleware);
+
+
+/*
+ * =========================
+ * API DE L'APPLICATION
+ * =========================
+ */
+
+/*
+ * Liste des utilisateurs.
+ *
+ * Tous les utilisateurs connectés peuvent
+ * actuellement accéder à cette liste.
+ */
+app.get('/auth/users', async (req, res) => {
+
+  const users = await auth.getUsers();
+
+  res.json(users);
+});
+
+
+/*
+ * Création d'un code d'invitation.
+ *
+ * Tous les utilisateurs connectés peuvent
+ * actuellement créer un code.
+ */
+app.post('/auth/invite/new', async (req, res) => {
+
+  const invite = await auth.createInvite();
+
+  res.json(invite);
+});
+
+
+/*
+ * Déconnexion.
+ *
+ * Cette route nécessite une authentification.
+ */
+app.post('/auth/logout', async (req, res) => {
+
+  await auth.logout(req.token);
+
+  res.json({
+    success: true
+  });
+});
+
+
+//
+// =========================
+// ELEMENTS
+// =========================
+//
+
+// Liste/recherche
+app.get('/elements/search/:jeu', async (req, res) => {
+  res.json(await element.getSearch(req.params.jeu));
+});
+
+
+// Statistiques d'un jeu
+app.get('/elements/:jeu/stats', async (req, res) => {
+  res.json(await element.getStat(req.params.jeu));
+});
+
+
+// Éléments supprimés d'un jeu
+app.get('/elements/:jeu/deleted', async (req, res) => {
+
+  const deleted = await element.getDeletedElements(
+    req.params.jeu
+  );
+
+  res.json(deleted);
+});
+
+// Restaurer un élément supprimé
+app.post('/elements/:elementId/restore', async (req, res) => {
+
+  const restored = await element.restoreDeletedElement(
+    req.params.elementId,
+    req.user
+  );
+
+  if (!restored) {
+    return res.status(404).json({
+      error: "Element supprimé introuvable ou impossible à restaurer"
+    });
+  }
+
+  res.json({
+    message: "Element restauré",
+    id: parseInt(req.params.elementId, 10),
+    version: restored.insertedId,
+    action: "RESTORE"
+  });
+});
+
+
+// Liste des éléments d'un jeu et d'un type
+app.get('/elements/:jeu/type/:type', async (req, res) => {
+  res.json(
+    await element.getListElement(
+      req.params.jeu,
+      req.params.type
+    )
+  );
+});
+
+
+// Création
+app.post('/elements', async (req, res) => {
+
+  const data = req.body;
+
+  const elementData = await element.buildElement(
+    data.content,
+    data.meta.jeu,
+    data.meta.type,
+    0,
+    req.user,
+    "CREATED"
+  );
+
+  const id = await element.save(elementData);
+
+  res.json({
+    message: "Element created with id:" + id,
+    id,
+    action: "CREATE"
+  });
+});
+
+
+// Dernière version d'un élément
+app.get('/elements/:elementId', async (req, res) => {
+
+  const carte = await element.getElement(
+    req.params.elementId
+  );
+
+  if (carte) {
+    res.json(carte);
+  } else {
+    res.status(404).json(null);
+  }
+});
+
+
+// Mise à jour
+app.post('/elements/:elementId', async (req, res) => {
+
+  const data = req.body;
+  const id = parseInt(req.params.elementId, 10);
+
+  const elementData = await element.buildElement(
+    data.content,
+    data.meta.jeu,
+    data.meta.type,
+    id,
+    req.user,
+    "UPDATED"
+  );
+
+  await element.save(elementData);
+
+  res.json({
+    message: "Element updated with id:" + id,
+    id,
+    action: "UPDATE"
+  });
+});
+
+
+// Suppression
+app.delete('/elements/:elementId', async (req, res) => {
+
+  const id = parseInt(req.params.elementId, 10);
+  const data = await element.getElement(id);
+
+  if (!data) {
+    return res.status(404).json({
+      error: "Element introuvable"
+    });
+  }
+
+  const elementData = await element.buildElement(
+    { name: data.content.name },
+    data.meta.jeu,
+    data.meta.type,
+    id,
+    req.user,
+    "DELETED"
+  );
+
+  await element.save(elementData);
+
+  res.json({
+    message: "Element id:" + id + " deleted",
+    id,
+    action: "DELETE"
+  });
+});
+
+
+// Versions d'un élément
+app.get('/elements/:elementId/versions', async (req, res) => {
+
+  const versions = await element.getElementVersions(
+    req.params.elementId
+  );
+
+  res.json(versions);
+});
+
+
+// Version précise
+app.get('/elements/:elementId/versions/:versionId', async (req, res) => {
+
+  const elementVersion = await element.getElementVersion(
+    req.params.elementId,
+    req.params.versionId
+  );
+
+  if (!elementVersion) {
+    return res.status(404).json({
+      error: "Version introuvable"
+    });
+  }
+
+  res.json(elementVersion);
+});
+
+
+// Restaurer une version
+app.post('/elements/:elementId/versions/:versionId/restore', async (req, res) => {
+
+  const restored = await element.restoreElement(
+    req.params.elementId,
+    req.params.versionId,
+    req.user
+  );
+
+  if (!restored) {
+    return res.status(404).json({
+      error: "Version introuvable"
+    });
+  }
+
+  res.json({
+    message: "Version restaurée",
+    id: parseInt(req.params.elementId, 10),
+    version: restored.insertedId,
+    action: "RESTORE"
+  });
+});
 
 
 
@@ -130,12 +402,15 @@ app.get('/tag/all', async (req, res) => {
 
 app.post('/tag/:type/new', async (req, res) => {
   let data = await req.body.val;
-  await tag.add(req.params.type,data)
+  await tag.add(req.params.type, data)
   res.json(await tag.get())
 
 })
 
+
+
+
 app.listen(process.env.PORT, () => {
-  console.log('Server is running on port:'+process.env.PORT)
+  console.log('Server is running on port:' + process.env.PORT)
 })
 
