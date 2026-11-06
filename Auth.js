@@ -347,7 +347,28 @@ export async function getUser(id) {
  * Gestion des droits.
  */
 export function checkGrant(u, level) {
-  return true;
+
+  if (level === "admin") {
+    return u?.data?.admin === true;
+  }
+
+  return !!u;
+}
+
+
+/*
+ * Middleware : réservé aux administrateurs
+ * (GEuser.data.admin === true).
+ */
+export function requireAdmin(req, res, next) {
+
+  if (!checkGrant(req.user, "admin")) {
+    return res.status(403).json({
+      error: "Accès réservé aux administrateurs"
+    });
+  }
+
+  next();
 }
 
 
@@ -356,32 +377,17 @@ export function checkGrant(u, level) {
  */
 async function nextId(id) {
 
-  const val = await db.ids?.findOne({
-    id
-  });
+  /*
+   * Incrément atomique : deux inscriptions simultanées
+   * ne peuvent pas obtenir le même id.
+   */
+  const val = await db.ids.findOneAndUpdate(
+    { id },
+    { $inc: { val: 1 } },
+    { upsert: true, returnDocument: "after" }
+  );
 
-  if (!val) {
-
-    await db.ids?.insertOne({
-      id,
-      val: 1
-    });
-
-    return 1;
-
-  } else {
-
-    await db.ids?.updateOne(
-      { id },
-      {
-        "$inc": {
-          val: 1
-        }
-      }
-    );
-
-    return val.val + 1;
-  }
+  return val.val;
 }
 
 

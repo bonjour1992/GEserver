@@ -41,7 +41,13 @@ export async function getListElement(jeu, type) {
 
 
 
+// Anciens noms de type : une restauration d'ancienne version reprend le nom actuel.
+const TYPE_ALIASES = {
+    followyn: { "character:": "character" }
+}
+
 export async function buildElement(content, jeu, type, id, u, status) {
+    type = TYPE_ALIASES[jeu]?.[type] ?? type
     let nid
     if (id === 0)
         nid = await nextId("element")
@@ -72,16 +78,14 @@ export async function save(data) {
 }
 
 
+// Incrément atomique : deux créations simultanées ne peuvent pas obtenir le même id.
 async function nextId(id) {
-    const val = await db.ids?.findOne({ 'id': id })
-    if (!val) {
-        await db.ids?.insertOne({ 'id': id, 'val': 1 });
-        return 1
-    }
-    else {
-        await db.ids?.updateOne({ 'id': id }, { '$inc': { 'val': 1 } })
-        return val.val + 1
-    }
+    const val = await db.ids.findOneAndUpdate(
+        { id },
+        { $inc: { val: 1 } },
+        { upsert: true, returnDocument: "after" }
+    )
+    return val.val
 }
 
 export async function getStat(jeu) {
@@ -96,7 +100,7 @@ export async function getStat(jeu) {
         {
             $sort: {
                 "id": 1,
-                "meta.date": -1,
+                "meta.created": -1,
                 "_id": -1
             }
         },

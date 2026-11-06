@@ -4,6 +4,7 @@ import * as remp from "./remp.js"
 import * as auth from "./Auth.js"
 import * as tag from "./tag.js"
 import { getImage, saveImage } from './image.js';
+import * as partie from './partieRoutes.js';
 
 
 import { DB, DBInit } from './db.js';
@@ -26,6 +27,7 @@ tag.db.tag = (await DB).collection("tag")
 auth.db.tokenAuth = (await DB).collection("GEtokenAuth")
 auth.db.tokenInvite = (await DB).collection("GEtokenInvite")
 auth.db.ids = (await DB).collection("ids")
+await partie.init(await DB)
 
 //scripting
 
@@ -109,12 +111,17 @@ app.use(auth.middleware);
  */
 
 /*
- * Liste des utilisateurs.
- *
- * Tous les utilisateurs connectés peuvent
- * actuellement accéder à cette liste.
+ * Utilisateur connecté (permet au client de savoir s'il est admin).
  */
-app.get('/auth/users', async (req, res) => {
+app.get('/auth/me', async (req, res) => {
+  res.json(req.user);
+});
+
+
+/*
+ * Liste des utilisateurs : réservée aux admins.
+ */
+app.get('/auth/users', auth.requireAdmin, async (req, res) => {
 
   const users = await auth.getUsers();
 
@@ -123,12 +130,9 @@ app.get('/auth/users', async (req, res) => {
 
 
 /*
- * Création d'un code d'invitation.
- *
- * Tous les utilisateurs connectés peuvent
- * actuellement créer un code.
+ * Création d'un code d'invitation : réservée aux admins.
  */
-app.post('/auth/invite/new', async (req, res) => {
+app.post('/auth/invite/new', auth.requireAdmin, async (req, res) => {
 
   const invite = await auth.createInvite();
 
@@ -149,6 +153,10 @@ app.post('/auth/logout', async (req, res) => {
     success: true
   });
 });
+
+
+// Engine de jeu (parties)
+app.use('/partie', partie.router)
 
 
 //
@@ -388,7 +396,14 @@ app.post(
   "/upload-image",
   express.raw({ type: "image/*", limit: "10mb" }),
   async (req, res) => {
-    await saveImage(req)
+    const saved = await saveImage(req)
+
+    if (!saved) {
+      return res.status(400).json({
+        success: false,
+        error: "Chemin ou fichier image invalide"
+      });
+    }
 
     res.json({
       success: true,
