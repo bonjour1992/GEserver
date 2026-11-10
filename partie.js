@@ -17,7 +17,7 @@ import { miseEnPlace as miseEnPlaceTi5 } from "../client/src/Game/Ti5/engine/mis
  * qu'il a le droit de voir.
  */
 
-export let db = { partie: null, coup: null, ids: null, chat: null };
+export let db = { partie: null, coup: null, ids: null, chat: null, note: null };
 
 export class Erreur extends Error {
     constructor(message, status = 400) {
@@ -38,6 +38,7 @@ export async function init() {
     await db.partie.createIndex({ id: 1 }, { unique: true });
     await db.coup.createIndex({ partie: 1, n: 1 }, { unique: true });
     await db.chat.createIndex({ partie: 1, n: 1 }, { unique: true });
+    await db.note.createIndex({ partie: 1, userId: 1 }, { unique: true });
 }
 
 /*
@@ -142,6 +143,7 @@ function resume(p) {
 const CHAMPS_ACTION = [
     "type", "c", "vers", "sur", "de", "zone", "n", "faces", "id", "delta",
     "valeur", "face", "marque", "tour", "phase", "joueurActif", "anneaux", "jeton", "annuler",
+    "dessous",
 ];
 
 // Un champ d'action n'entre au journal que s'il est simple : nombre fini,
@@ -166,7 +168,7 @@ const decrire = c => ({
     id: c.id,
     ref: c.ref,
     jeton: c.jeton,
-    dos: c.ref?.type || "jeton",
+    dos: regles.dosDe(c),
 });
 
 /*
@@ -335,6 +337,7 @@ export function filtrerCoup(coup, userId) {
             de: action.de,
             vers: action.vers,
             zone: action.zone,
+            dessous: action.dessous,
             composants: action.composants.map(c => ({ dos: c.dos })),
             cache: true,
         };
@@ -390,12 +393,64 @@ async function coupsRecents(p, userId, avant) {
  * ============================================================
  */
 
+// Verso d'une carte face cachée : certains dépendent de son contenu, visible
+// de tous au dos de la carte (icône rouge d'un événement majeur). Par jeu et
+// par type, les champs du contenu joints aux composants cachés.
+const CHAMPS_VERSO = { ti5: { evenement: ["type"] } };
+const DUREE_VERSOS = 60 * 1000;
+const versos = new Map();
+
+async function versosDe(jeu) {
+
+    const champsParType = CHAMPS_VERSO[jeu];
+
+    if (!champsParType) {
+        return null;
+    }
+
+    const enCache = versos.get(jeu);
+
+    if (enCache && Date.now() - enCache.quand < DUREE_VERSOS) {
+        return enCache.versoDe;
+    }
+
+    try {
+        const parType = {};
+
+        for (const [type, champs] of Object.entries(champsParType)) {
+            parType[type] = new Map();
+
+            for (const e of await getListElement(jeu, type)) {
+                const verso = {};
+
+                for (const k of champs) {
+                    if (e.content?.[k] !== undefined) {
+                        verso[k] = e.content[k];
+                    }
+                }
+
+                if (Object.keys(verso).length) {
+                    parType[type].set(Number(e.id), verso);
+                }
+            }
+        }
+
+        const versoDe = c => (c.ref && parType[c.ref.type]?.get(Number(c.ref.id))) || null;
+
+        versos.set(jeu, { quand: Date.now(), versoDe });
+
+        return versoDe;
+    } catch {
+        return enCache?.versoDe || null;
+    }
+}
+
 async function vue(p, userId) {
     return {
         rev: p.rev,
         moi: userId,
         partie: resume(p),
-        etat: p.etat ? regles.filtrerEtat(p.etat, userId) : null,
+        etat: p.etat ? regles.filtrerEtat(p.etat, userId, await versosDe(p.jeu)) : null,
         coups: p.etat ? await coupsRecents(p, userId) : [],
     };
 }
@@ -514,6 +569,45 @@ export async function ecrire(id, user, { texte, a }) {
     dernierMessage.set(p.id, Math.max(message.n, dernierMessage.get(p.id) || 0));
 
     return { message: messagePublic(message) };
+}
+
+/*
+ * Notes : un texte libre par joueur et par partie (onglet « Notes »).
+ * Seul son auteur la lit et l'écrit ; elle ne fait pas partie de l'état.
+ */
+const LONGUEUR_NOTE = 20000;
+
+export async function lireNote(id, user) {
+
+    const p = await charger(id);
+
+    if (!estJoueur(p, user.id)) {
+        throw new Erreur("Vous ne jouez pas dans cette partie", 403);
+    }
+
+    const note = await db.note.findOne({ partie: p.id, userId: user.id });
+
+    return { texte: note?.texte ?? "", date: note?.date ?? null };
+}
+
+export async function ecrireNote(id, user, { texte }) {
+
+    const p = await charger(id);
+
+    if (!estJoueur(p, user.id)) {
+        throw new Erreur("Vous ne jouez pas dans cette partie", 403);
+    }
+
+    texte = String(texte ?? "").slice(0, LONGUEUR_NOTE);
+    const date = Date.now();
+
+    await db.note.updateOne(
+        { partie: p.id, userId: user.id },
+        { $set: { texte, date } },
+        { upsert: true }
+    );
+
+    return { texte, date };
 }
 
 export async function getCoups(id, user, avant) {
@@ -674,6 +768,7 @@ export function supprimer(id, user) {
 
         await db.coup.deleteMany({ partie: p.id });
         await db.chat.deleteMany({ partie: p.id });
+        await db.note.deleteMany({ partie: p.id });
         await db.ids.deleteOne({ id: "chat:" + p.id });
         dernierMessage.delete(p.id);
         await db.partie.deleteOne({ id: p.id });

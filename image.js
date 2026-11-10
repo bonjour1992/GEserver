@@ -4,7 +4,9 @@ import path from "path";
 
 const options = {
     depth: 10,
-    // exclude: "",       // To exclude some pahts with a regexp
+    // Vignettes de la bibliothèque d'images (créées par le client à l'ajout
+    // d'une image) : ce ne sont pas des images à proposer
+    exclude: /_vignettes/,
     extensions: ['svg', 'jpg', 'png', 'jpeg'],    // To include only some extensions
     stat: false,
     size: false,

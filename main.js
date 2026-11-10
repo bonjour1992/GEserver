@@ -130,6 +130,17 @@ app.get('/auth/users', auth.requireAdmin, async (req, res) => {
 
 
 /*
+ * Statut d'un utilisateur ("admin" ou "utilisateur") : réservé aux admins.
+ */
+app.put('/auth/users/:id/statut', auth.requireAdmin, async (req, res) => {
+
+  const r = await auth.setStatut(Number(req.params.id), String(req.body?.statut || ""), req.user);
+
+  res.status(r.error ? 400 : 200).json(r);
+});
+
+
+/*
  * Création d'un code d'invitation : réservée aux admins.
  */
 app.post('/auth/invite/new', auth.requireAdmin, async (req, res) => {

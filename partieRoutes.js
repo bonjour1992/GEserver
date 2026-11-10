@@ -11,6 +11,7 @@ export async function init(DB) {
     partie.db.coup = DB.collection("partieCoup");
     partie.db.ids = DB.collection("ids");
     partie.db.chat = DB.collection("partieChat");
+    partie.db.note = DB.collection("partieNote");
 
     await partie.init();
 }
@@ -56,6 +57,15 @@ router.get("/:id/suite", async (req, res) => {
 // Chat : écrire un message (a : destinataire d'un message privé)
 router.post("/:id/chat", async (req, res) => {
     res.json(await partie.ecrire(req.params.id, req.user, req.body || {}));
+});
+
+// Notes privées du demandeur (onglet « Notes »)
+router.get("/:id/note", async (req, res) => {
+    res.json(await partie.lireNote(req.params.id, req.user));
+});
+
+router.put("/:id/note", async (req, res) => {
+    res.json(await partie.ecrireNote(req.params.id, req.user, req.body || {}));
 });
 
 // Historique : coups plus anciens que ?avant=<n>

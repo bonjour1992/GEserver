@@ -468,6 +468,51 @@ export async function getUsers() {
 
 
 /*
+ * Statut d'un utilisateur : "admin" (GEuser.data.admin === true) ou
+ * "utilisateur". Changé par un admin depuis la page d'administration.
+ *
+ * Garde-fous : un admin ne retire pas son propre statut d'admin, et il
+ * reste toujours au moins un admin.
+ */
+export const STATUTS = ["utilisateur", "admin"];
+
+export async function setStatut(id, statut, auteur) {
+
+  if (!STATUTS.includes(statut)) {
+    return { error: "Statut inconnu" };
+  }
+
+  const cible = await db.user?.findOne({ id });
+
+  if (!cible) {
+    return { error: "Utilisateur introuvable" };
+  }
+
+  const admin = statut === "admin";
+
+  if (!admin && cible.data?.admin === true) {
+
+    if (cible.id === auteur?.id) {
+      return { error: "Vous ne pouvez pas retirer votre propre statut d'administrateur" };
+    }
+
+    const admins = await db.user.countDocuments({ "data.admin": true });
+
+    if (admins <= 1) {
+      return { error: "Il doit rester au moins un administrateur" };
+    }
+  }
+
+  await db.user.updateOne(
+    { id },
+    admin ? { $set: { "data.admin": true } } : { $unset: { "data.admin": "" } }
+  );
+
+  return { id, statut };
+}
+
+
+/*
 
 Création d'un code d'invitation.
 
