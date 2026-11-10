@@ -19,12 +19,45 @@ export async function getElement(id) {
 }
 
 
+// Ce à quoi un élément est lié (champs lienType / lienElement des éléments
+// ti5) : le nom de la faction, de l'événement... ou la sorte de lien. Les
+// listes de l'éditeur l'affichent après le nom pour distinguer les homonymes
+// (« Cuirassé — Université de Jol-Nar »). Rien pour un élément commun.
+const SORTES_DE_LIEN = {
+    faction: "faction",
+    neutre: "faction neutre",
+    evenement: "événement",
+    mercenaire: "mercenaire",
+    special: "spécial",
+}
+
+function etiquetteLien(content, noms) {
+
+    const type = content?.lienType
+
+    if (!type || type === "commun") {
+        return undefined
+    }
+
+    const nom = Number(content.lienElement?.id) > 0 ? noms.get(Number(content.lienElement.id)) : null
+
+    // (sans le préfixe !...! des anciens noms)
+    return nom ? String(nom).replace(/^(![^!]*!)+/, "") : SORTES_DE_LIEN[type]
+}
+
 export async function getSearch(jeu) {
     let element = await db.elements.aggregate([{ "$match": { "meta.jeu": { "$eq": jeu } } }, { "$sort": { "meta.created": 1 } }, { $group: { _id: "$id", "doc": { "$last": "$$ROOT" } } }]).toArray();
-    element = element.map((e) => { let r = e.doc.meta; r.id = e.doc?.id; r.name = e.doc.content?.name; return r })
-    element = element.filter((e) => e.status !== "DELETED")
-    element = element.map(e => { return { jeu: e.jeu, type: e.type, id: e.id, name: e.name } })
-    return element
+    element = element.map(e => e.doc).filter(d => d.meta.status !== "DELETED")
+
+    const noms = new Map(element.map(d => [d.id, d.content?.name]))
+
+    return element.map(d => ({
+        jeu: d.meta.jeu,
+        type: d.meta.type,
+        id: d.id,
+        name: d.content?.name,
+        lie: etiquetteLien(d.content, noms),
+    }))
 }
 
 
