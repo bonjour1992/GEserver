@@ -278,7 +278,7 @@ export function appliquerCoup(etat, actions, auteur, joueurs) {
             entree.secret = true;
         }
 
-        // Vers une zone invisible (plateau de vote caché, zone secrète) :
+        // Vers une zone invisible (plateau de vote caché) :
         // l'action n'est montrée qu'à son propriétaire, même si le composant
         // venait d'une zone publique. Depuis une telle zone vers une zone
         // publique : l'action est montrée, mais pas d'où vient le composant.
@@ -308,8 +308,7 @@ export function appliquerCoup(etat, actions, auteur, joueurs) {
 // Version d'un coup pour un joueur donné
 export function filtrerCoup(coup, userId) {
 
-    const invisible = zone =>
-        regles.joueurDeVote(zone || "") !== null || regles.joueurDeSecret(zone || "") !== null;
+    const invisible = zone => regles.joueurDeVote(zone || "") !== null;
 
     const actions = coup.actions.map(({ visible, masquerDe, secret, ...action }) => {
 
@@ -324,7 +323,7 @@ export function filtrerCoup(coup, userId) {
             return action;
         }
 
-        // Plateau de vote caché, zone secrète : rien n'en est montré aux
+        // Plateau de vote caché : rien n'en est montré aux
         // autres, pas même qu'un élément y a été posé ou en a été retiré.
         // (secret : décidé par le serveur à l'application du coup ; le test
         // des zones reste pour les coups enregistrés avant ce champ)
