@@ -616,7 +616,7 @@ export async function getCoups(id, user, avant) {
 export async function lister(jeu) {
     const parties = await db.partie
         // De l'état, la liste ne lit que le tour et la phase
-        .find({ jeu }, { projection: { _id: 0, "etat.composants": 0, "etat.compteurs": 0, "etat.references": 0 } })
+        .find({ jeu }, { projection: { _id: 0, "etat.composants": 0, "etat.compteurs": 0, "etat.references": 0, "etat.depart": 0 } })
         .sort({ cree: -1 })
         .toArray();
 
